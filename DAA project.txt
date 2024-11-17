@@ -1,0 +1,136 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+class OBSTNode {
+    String word;
+    OBSTNode left, right;
+
+    OBSTNode(String word) {
+        this.word = word;
+        left = right = null;
+    }
+}
+
+class OptimalBST {
+    private OBSTNode root;
+    private String[] words;
+    private int[] frequencies;
+
+    public OptimalBST(String[] words, int[] frequencies) {
+        this.words = words;
+        this.frequencies = frequencies;
+        root = buildOptimalBST();
+    }
+
+    private OBSTNode buildOptimalBST() {
+        int n = words.length;
+        int[][] cost = new int[n + 1][n + 1];
+        int[][] rootIndex = new int[n + 1][n + 1];
+        int[] prefixSum = new int[n + 1];
+
+        // Compute prefix sum of frequencies
+        for (int i = 1; i <= n; i++) {
+            prefixSum[i] = prefixSum[i - 1] + frequencies[i - 1];
+        }
+
+        // Cost for single keys
+        for (int i = 0; i < n; i++) {
+            cost[i][i] = frequencies[i];
+            rootIndex[i][i] = i;
+        }
+
+        // Build cost matrix for all subtrees
+        for (int len = 2; len <= n; len++) {
+            for (int i = 0; i <= n - len; i++) {
+                int j = i + len - 1;
+                cost[i][j] = Integer.MAX_VALUE;
+
+                for (int r = i; r <= j; r++) {
+                    int currentCost = ((r > i) ? cost[i][r - 1] : 0) +
+                                      ((r < j) ? cost[r + 1][j] : 0) +
+                                      (prefixSum[j + 1] - prefixSum[i]);
+
+                    if (currentCost < cost[i][j]) {
+                        cost[i][j] = currentCost;
+                        rootIndex[i][j] = r;
+                    }
+                }
+            }
+        }
+
+        return constructTree(0, n - 1, rootIndex);
+    }
+
+    private OBSTNode constructTree(int i, int j, int[][] rootIndex) {
+        if (i > j) return null;
+
+        int r = rootIndex[i][j];
+        OBSTNode node = new OBSTNode(words[r]);
+        node.left = constructTree(i, r - 1, rootIndex);
+        node.right = constructTree(r + 1, j, rootIndex);
+
+        return node;
+    }
+
+    public void predictAll(String prefix) {
+        List<String> suggestions = new ArrayList<>();
+        collectSuggestions(root, prefix.toLowerCase(), suggestions);
+
+        if (suggestions.isEmpty()) {
+            System.out.println("No suggestions found for the given prefix.");
+        } else {
+            System.out.println("Suggestions: " + suggestions);
+        }
+    }
+
+    private void collectSuggestions(OBSTNode node, String prefix, List<String> suggestions) {
+        if (node == null) return;
+
+        if (node.word.toLowerCase().startsWith(prefix)) {
+            suggestions.add(node.word);
+        }
+
+        if (prefix.compareTo(node.word.toLowerCase()) <= 0) {
+            collectSuggestions(node.left, prefix, suggestions);
+        }
+        if (prefix.compareTo(node.word.toLowerCase()) >= 0) {
+            collectSuggestions(node.right, prefix, suggestions);
+        }
+    }
+
+    public void printInOrder(OBSTNode node) {
+        if (node == null) return;
+        printInOrder(node.left);
+        System.out.print(node.word + " ");
+        printInOrder(node.right);
+    }
+
+    public void printTree() {
+        System.out.println("In-order traversal of OBST:");
+        printInOrder(root);
+        System.out.println();
+    }
+}
+
+public class Main { // Updated class name to Main for online compilers
+    public static void main(String[] args) {
+        // Example words and frequencies
+        String[] words = {"apple", "banana", "cherry", "date", "grape"};
+        int[] frequencies = {30, 20, 15, 10, 25};
+
+        OptimalBST obst = new OptimalBST(words, frequencies);
+
+        // Display the tree
+        obst.printTree();
+
+        // Predictive text
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter a prefix to predict: ");
+        String prefix = scanner.nextLine();
+
+        obst.predictAll(prefix);
+
+        scanner.close();
+    }
+}
